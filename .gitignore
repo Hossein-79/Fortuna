@@ -33,3 +33,6 @@ pnpm-lock.yaml
 
 # template related files
 example-collection/
+.vercel
+
+.vscode
