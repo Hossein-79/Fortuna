@@ -8,12 +8,11 @@ import { AccountInfo } from "@/components/AccountInfo";
 import { TransferAPT } from "@/components/TransferAPT";
 import { MessageBoard } from "@/components/MessageBoard";
 
-function App() {
+function Home() {
   const { connected } = useWallet();
 
   return (
     <>
-      <Header />
       <div className="flex items-center justify-center flex-col">
         {connected ? (
           <Card>
@@ -35,4 +34,4 @@ function App() {
   );
 }
 
-export default App;
+export default Home;
