@@ -1,84 +1,87 @@
-module message_board_addr::message_board {
-    use std::string::String;
+module fortuna_addr::fortuna {
+    use std::string::{String};
+    use std::vector;
+    use std::signer;
 
-    use aptos_framework::object::{Self, ExtendRef};
-
-    struct Message has key {
-        string_content: String,
+   struct UserStorage has key {
+        causes: vector<Cause>,
+        last_index: u64,  
     }
 
-    const BOARD_OBJECT_SEED: vector<u8> = b"message_board";
-
-    struct BoardObjectController has key {
-        extend_ref: ExtendRef,
+     struct Cause has store, copy, drop {
+        id: u64,
+        title: String,
+        goal: u64,
+        charity_percentage: u8,
+        ticket_price: u64,  
+        tickets: vector<Ticket>,
+        winner: address,
+        open: bool,
     }
 
-    // This function is only called once when the module is published for the first time.
-    // init_module is optional, you can also have an entry function as the initializer.
-    fun init_module(sender: &signer) {
-        let constructor_ref = &object::create_named_object(sender, BOARD_OBJECT_SEED);
-        move_to(&object::generate_signer(constructor_ref), BoardObjectController {
-            extend_ref: object::generate_extend_ref(constructor_ref),
-        });
+    struct Ticket has store, copy, drop {
+        buyer: address, 
     }
 
-    // ======================== Write functions ========================
+     public entry fun create_lottery(user: &signer, cause_name: String, cause_goal: u64, cause_charity_percentage: u8, cause_ticket_price: u64) acquires UserStorage {
+        let user_addr = signer::address_of(user);
 
-    public entry fun post_message(
-        _sender: &signer,
-        new_string_content: String,
-    ) acquires Message, BoardObjectController {
-        if (!exist_message()) {
-            let board_obj_signer = get_board_obj_signer();
-            move_to(&board_obj_signer, Message {
-                string_content: new_string_content,
-            });
+        // Check if the user already has UserStorage, initialize if not
+        if (!exists<UserStorage>(user_addr)) {
+            let storage = UserStorage {
+                causes: vector::empty<Cause>(), 
+                last_index: 0,
+            };
+            move_to(user, storage);
         };
-        let message = borrow_global_mut<Message>(get_board_obj_address());
-        message.string_content = new_string_content;
-    }
 
-    // ======================== Read Functions ========================
+        let storage_ref = borrow_global_mut<UserStorage>(user_addr);
+
+        let new_cause = Cause {
+            id: storage_ref.last_index,
+            title: cause_name,
+            goal: cause_goal,
+            charity_percentage: cause_charity_percentage,
+            ticket_price: cause_ticket_price,
+            tickets: vector::empty<Ticket>(),
+            winner: @0x0, 
+            open: true,
+        };
+
+        vector::push_back(&mut storage_ref.causes, new_cause);
+        storage_ref.last_index = storage_ref.last_index + 1;
+    }
 
     #[view]
-    public fun exist_message(): bool {
-        exists<Message>(get_board_obj_address())
+    public fun get_lotteries(user_addr: address): vector<Cause> acquires UserStorage {
+        let user_storage = borrow_global<UserStorage>(user_addr);
+        return user_storage.causes
     }
 
-    #[view]
-    public fun get_message_content(): (String) acquires Message {
-        let message = borrow_global<Message>(get_board_obj_address());
-        message.string_content
-    }
+    // ---------------------- test --------------------
 
-    // ======================== Helper functions ========================
+    #[test(test_user = @0x4321)]
+    fun test_create_and_get_lotteries(test_user: signer) acquires UserStorage {
+        use std::string;
+        use std::vector;
+        // Get the admin address
+        let owner = signer::address_of(&test_user);
 
-    fun get_board_obj_address(): address {
-        object::create_object_address(&@message_board_addr, BOARD_OBJECT_SEED)
-    }
+        // Create some lotteries
+        let cause_name1 = string::utf8(b"First Cause");
+        let cause_name2 = string::utf8(b"Second Cause");
+        create_lottery(&test_user, cause_name1, 1000, 10, 5);
+        create_lottery(&test_user, cause_name2, 2000, 15, 10);
 
-    fun get_board_obj_signer(): signer acquires BoardObjectController {
-        object::generate_signer_for_extending(&borrow_global<BoardObjectController>(get_board_obj_address()).extend_ref)
-    }
+        // Retrieve the lotteries
+        let lotteries = get_lotteries(owner);
 
-    // ======================== Unit Tests ========================
+        assert!(vector::length(&lotteries) == 2, 1); 
 
-    #[test_only]
-    use std::string;
+        let first_lottery = vector::borrow(&lotteries, 0);
+        assert!(first_lottery.title == cause_name1, 2);  // Verify the first lottery name
 
-    #[test(sender = @message_board_addr)]
-    fun test_end_to_end<>(sender: &signer) acquires Message, BoardObjectController {
-        init_module(sender);
-
-        post_message(sender, string::utf8(b"hello world"));
-
-        let string_content = get_message_content();
-        assert!(string_content == string::utf8(b"hello world"), 3);
-
-        // Post again, should overwrite the old message
-        post_message(sender, string::utf8(b"hello aptos"));
-
-        let string_content = get_message_content();
-        assert!(string_content == string::utf8(b"hello aptos"), 16);
+        let second_lottery = vector::borrow(&lotteries, 1);
+        assert!(second_lottery.title == cause_name2, 3);  // Verify the second lottery name
     }
 }
