@@ -3,11 +3,19 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { supabase } from "@/utils/supabaseClient";
-import { profile } from "console";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  bio: string;
+  profile_picture: string;
+  wallet_address: string;
+}
 
 const formSchema = z.object({
   name: z.string().min(2).max(50),
@@ -16,6 +24,25 @@ const formSchema = z.object({
   profile_picture: z.instanceof(FileList).optional(),
   wallet_address: z.string().length(66),
 });
+
+async function fetchProfile(walletAddress: string): Promise<UserProfile> {
+  const profileData = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-user?wallet_address=${walletAddress}`,
+    {
+      headers: {
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!profileData.ok) {
+    throw new Error("Failed to fetch user");
+  }
+
+  const json = await profileData.json();
+  return json.data as UserProfile;
+}
 
 async function uploadProfilePicture(file: File) {
   const fileExtension = file.name.split(".").pop();
@@ -60,20 +87,36 @@ async function onSubmit(values: z.infer<typeof formSchema>) {
 }
 
 export default function MyProfile() {
+  const { account } = useWallet();
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [fetchedData, setFetchedData] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      setFetchedData(await fetchProfile(account?.address!));
+    };
+
+    if (account && !fetchedData) {
+      fetchUserProfile();
+    }
+  }, [account]);
+
+  useEffect(() => {
+    if (fetchedData) {
+      form.reset({ ...fetchedData, profile_picture: undefined });
+      setLoading(false);
+    }
+  }, [fetchedData]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      bio: "",
-      wallet_address: "0x7c4e40615bebabd79d8be497da5e55436d380393642e2f383c51f7bb0f87843d",
-    },
   });
   const fileRef = form.register("profile_picture");
 
-  return (
+  return loading ? (
+    <div>loading...</div>
+  ) : (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         {/* ----- WALLET ADDRESS ----- */}
