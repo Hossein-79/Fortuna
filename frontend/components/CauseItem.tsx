@@ -1,11 +1,7 @@
 import type { CauseResponse } from "@/routes/Cause";
-import { convertTimestampToReadable } from "@/utils/helpers";
+import { calculatePercentage, convertTimestampToReadable } from "@/utils/helpers";
 import { Link } from "react-router-dom";
 import { Progress } from "./ui/progress";
-
-function calculatePercentage(total: number, goal: number) {
-  return Math.round((total / goal) * 100);
-}
 
 function checkIfFinishedTime(deadline: number) {
   return new Date(deadline).valueOf() > new Date().valueOf();
