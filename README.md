@@ -81,7 +81,7 @@ Fortuna uses smart contracts deployed on the Aptos network to manage all core fu
 
 ## 📖 License
 
-This project is licensed under the MIT License - see the [LICENSE](/LICENSE) file for details.
+This project is licensed under the Apache License - see the [LICENSE](/LICENSE) file for details.
 
 ## 🌐 Live Demo
 
