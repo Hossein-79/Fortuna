@@ -41,7 +41,7 @@ export default function Explore() {
       <Heading
         title="Explore Causes"
         description="Discover and support causes"
-        icon={<CompassIcon className="w-8 h-8 text-neutral-500" />}
+        icon={<CompassIcon className="w-7 h-7 text-neutral-500" />}
       />
       {loading ? (
         <Loading />
