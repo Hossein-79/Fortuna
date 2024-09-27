@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-fortuna_addr = "0x1234"
+fortuna_addr = "0x91d7eb63a3cc0051bd18cdcc8de68bbe0a51ed48aca83cab5d419bad3fe6d7c1"
 
 [dependencies]
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "mainnet", subdir = "aptos-move/framework/aptos-framework" }
