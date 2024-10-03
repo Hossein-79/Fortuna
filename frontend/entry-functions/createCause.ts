@@ -10,19 +10,11 @@ export type CreateCauseArguments = {
 };
 
 export const createCause = (args: CreateCauseArguments): InputTransactionData => {
-    // const values = {
-    //     // user: args.user,
-    //     cause_name: args.title,
-    //     cause_goal: 0, //args.goal,
-    //     cause_charity_percentage: 0, // args.charity_percentage,
-    //     cause_ticket_price: 0, // args.ticket_price
-    // }
     const { title, goal, charity_percentage, ticket_price, cause_id } = args;
-    // console.log('🎈 data', Object.values(values))
     return {
         data: {
             function: `${import.meta.env.VITE_MODULE_ADDRESS}::fortuna::create_cause`,
-            functionArguments: [title, goal, charity_percentage, ticket_price, cause_id],
+            functionArguments: [title, Number(goal), Number(charity_percentage), Number(ticket_price), Number(cause_id)],
         },
         sender: args.user,
     }
