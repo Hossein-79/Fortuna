@@ -82,8 +82,8 @@ export default function MyProfile() {
 
   useEffect(() => {
     if (hasFetchedData) {
-      form.reset({ ...fetchedData, profile_picture: undefined, wallet_address: account?.address });
       setLoading(false);
+      form.reset({ ...fetchedData, profile_picture: undefined, wallet_address: account?.address });
     }
   }, [hasFetchedData]);
 

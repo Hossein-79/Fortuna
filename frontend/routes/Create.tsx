@@ -12,7 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, LoaderIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import type { CommittedTransactionResponse } from "@aptos-labs/ts-sdk";
 
 export interface Cause {
   id: bigint;
@@ -29,13 +32,15 @@ export interface Cause {
 const formSchema = z.object({
   id: z.number(),
   title: z.string().min(2).max(50),
-  description: z.string().max(160),
+  description: z.string().max(500),
   goal: z.coerce.number().min(1),
   deadline: z.coerce.number(),
   charity_percentage: z.coerce.number().min(0).max(100),
   image: z.instanceof(FileList).optional(),
   ticket_price: z.coerce.number().min(0),
   created_by: z.string().length(66),
+  total_funds_raised: z.number(),
+  total_tickets_sold: z.number(),
 });
 
 async function uploadImage(file: File) {
@@ -52,11 +57,14 @@ async function uploadImage(file: File) {
 
 export default function Create() {
   const { account, signAndSubmitTransaction } = useWallet();
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+  const [isDeployed, setIsDeployed] = useState<CommittedTransactionResponse | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      created_by: account?.address ?? "0x7c4e40615bebabd79d8be497da5e55436d380393642e2f383c51f7bb0f87843d",
+      created_by: account?.address ?? "",
       id: Math.floor(Math.random() * 100000000),
       title: "",
       description: "",
@@ -65,40 +73,45 @@ export default function Create() {
       charity_percentage: 0,
       image: undefined,
       ticket_price: 0,
+      total_funds_raised: 0,
+      total_tickets_sold: 0,
     },
   });
+
+  useEffect(() => {
+    if (account?.address) {
+      form.setValue("created_by", account.address);
+    }
+  }, [account]);
 
   const fileRef = form.register("image");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("🎈", values);
-    if (!account?.address) {
-      return;
-    }
+    if (!account?.address) return;
+    if (submitting) return;
+    setSubmitting(true);
     try {
-      // ----- CREATE CAUSE ON CHAIN -----
-      const committedCause = await signAndSubmitTransaction(
-        createCause({
-          user: values.created_by,
-          title: values.title,
-          charity_percentage: values.charity_percentage,
-          goal: values.goal,
-          ticket_price: values.ticket_price,
-          cause_id: values.id,
-        }),
-      );
-      console.log("🎈 commited:", committedCause);
-      const executedCause = await aptosClient().waitForTransaction({
-        transactionHash: committedCause.hash,
-      });
-      console.log("🎈 executed:", executedCause);
+      if (!isDeployed) {
+        // ----- CREATE CAUSE ON CHAIN -----
+        const committedCause = await signAndSubmitTransaction(
+          createCause({
+            user: values.created_by,
+            title: values.title,
+            charity_percentage: values.charity_percentage,
+            goal: values.goal,
+            ticket_price: values.ticket_price,
+            cause_id: values.id,
+          }),
+        );
+        console.log("🎈 commited:", committedCause);
+        const executedCause = await aptosClient().waitForTransaction({
+          transactionHash: committedCause.hash,
+        });
+        console.log("🎈 executed:", executedCause);
+        setIsDeployed(executedCause);
+      }
 
-      // const causeInfo = await aptosClient().({
-      //   hash: committedCause.hash,
-      // });
-      // console.log("🎈 causeInfo:", causeInfo);
-
-      // ----- UPLOAD IMAGE TO IPFS -----
+      // ----- UPLOAD IMAGE -----
       const uploadedImage = await uploadImage(values.image?.[0]!);
       const imageUrl = uploadedImage.path;
 
@@ -111,6 +124,7 @@ export default function Create() {
         },
         body: JSON.stringify({
           ...values,
+          deadline: new Date(values.deadline).toISOString(),
           image: imageUrl,
         }),
       });
@@ -120,8 +134,16 @@ export default function Create() {
       }
 
       console.log("Cause created successfully", await data.json());
+      toast({
+        description: "Your cause has been created successfully.",
+      });
     } catch (error) {
       console.error("Failed to create cause", error);
+      toast({
+        description: "Failed to create cause",
+      });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -132,13 +154,21 @@ export default function Create() {
         <FormField
           control={form.control}
           name="created_by"
-          render={({ field }) => <Input type="hidden" placeholder="Wallet Address" {...field} />}
+          render={({ field }) => <Input type="hidden" {...field} />}
         />
         {/* ----- ID ----- */}
+        <FormField control={form.control} name="id" render={({ field }) => <Input type="hidden" {...field} />} />
+        {/* ----- TOTAL RAISED ----- */}
         <FormField
           control={form.control}
-          name="id"
-          render={({ field }) => <Input type="hidden" placeholder="Cause Id" {...field} />}
+          name="total_funds_raised"
+          render={({ field }) => <Input type="hidden" {...field} />}
+        />
+        {/* ----- TOTAL SOLD ----- */}
+        <FormField
+          control={form.control}
+          name="total_tickets_sold"
+          render={({ field }) => <Input type="hidden" {...field} />}
         />
         {/* ----- TITLE ----- */}
         <FormField
@@ -154,6 +184,7 @@ export default function Create() {
               <FormMessage />
             </FormItem>
           )}
+          disabled={submitting}
         />
         {/* ----- DESCRIPTION ----- */}
         <FormField
@@ -169,21 +200,23 @@ export default function Create() {
               <FormMessage />
             </FormItem>
           )}
+          disabled={submitting}
         />
         {/* ----- IMAGE ----- */}
         <FormField
           control={form.control}
           name="image"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel>Image</FormLabel>
               <FormControl>
-                <Input type="file" {...fileRef} />
+                <Input type="file" {...fileRef} disabled={submitting} />
               </FormControl>
               <FormDescription>An image to represent your cause.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
+          disabled={submitting}
         />
         {/* ----- GOAL ----- */}
         <FormField
@@ -199,6 +232,7 @@ export default function Create() {
               <FormMessage />
             </FormItem>
           )}
+          disabled={submitting}
         />
         {/* ----- DEADLINE ----- */}
         <FormField
@@ -221,7 +255,7 @@ export default function Create() {
                     mode="single"
                     selected={new Date(field.value)}
                     onSelect={field.onChange}
-                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                    disabled={(date) => date < new Date()}
                     initialFocus
                   />
                 </PopoverContent>
@@ -230,6 +264,7 @@ export default function Create() {
               <FormMessage />
             </FormItem>
           )}
+          disabled={submitting}
         />
         {/* ----- CHARITY PERCENTAGE ----- */}
         <FormField
@@ -245,6 +280,7 @@ export default function Create() {
               <FormMessage />
             </FormItem>
           )}
+          disabled={submitting}
         />
         {/* ----- TICKET PRICE ----- */}
         <FormField
@@ -260,8 +296,12 @@ export default function Create() {
               <FormMessage />
             </FormItem>
           )}
+          disabled={submitting}
         />
-        <Button type="submit">Save</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting && <LoaderIcon className="animate-spin w-4 h-4 mr-2" />}
+          Save
+        </Button>
       </form>
     </Form>
   );

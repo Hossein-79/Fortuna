@@ -14,7 +14,7 @@ export const createCause = (args: CreateCauseArguments): InputTransactionData =>
     return {
         data: {
             function: `${import.meta.env.VITE_MODULE_ADDRESS}::fortuna::create_cause`,
-            functionArguments: [title, Number(goal), Number(charity_percentage), Number(ticket_price), Number(cause_id)],
+            functionArguments: [title, Number(goal) * 1_000_000, Number(charity_percentage), Number(ticket_price) * 1_000_000, Number(cause_id)],
         },
         sender: args.user,
     }

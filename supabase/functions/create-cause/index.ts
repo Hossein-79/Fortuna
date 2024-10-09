@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
 
     const { data, error } = await supabase
       .from("causes")
-      .insert({ id, title, description, goal, deadline, charity_percentage, image, ticket_price, created_by }, { onConflict: ["id"] });
+      .insert({ id, title, description, goal, deadline, charity_percentage, image, ticket_price, created_by, total_funds_raised: 0, total_tickets_sold: 0 }, { onConflict: ["id"] });
 
     if (error) {
       throw new Error(error.message);

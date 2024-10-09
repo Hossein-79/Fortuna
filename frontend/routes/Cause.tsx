@@ -3,7 +3,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
+import { buyTicket } from "@/entry-functions/buyTicket";
 import { calculatePercentage, convertTimestampToReadable } from "@/utils/helpers";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { CopyIcon, InfoIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -66,6 +68,7 @@ const fetchUser = async (wallet: string): Promise<UserResponse> => {
 
 export default function Cause() {
   const { toast } = useToast();
+  const { account, signAndSubmitTransaction } = useWallet();
   const { id } = useParams<{ id: string; creator: string }>();
 
   const [loading, setLoading] = useState(true);
@@ -98,6 +101,28 @@ export default function Cause() {
   function handleCopyWalletAddress(address: string) {
     navigator.clipboard.writeText(address);
     toast({ description: `Wallet address copied to clipboard` });
+  }
+
+  async function handleBuyTicket(amount: number) {
+    if (!account) {
+      toast({ description: "Please connect your wallet" });
+      return;
+    }
+
+    try {
+      const transaction = await signAndSubmitTransaction(
+        buyTicket({
+          user: account.address!,
+          amount,
+          cause_id: Number(id),
+          to_address: fetchedData?.created_by!,
+        }),
+      );
+      console.log(transaction);
+      toast({ description: "Ticket bought successfully" });
+    } catch (error) {
+      toast({ description: "Failed to buy ticket" });
+    }
   }
 
   return loading ? (
@@ -178,7 +203,7 @@ export default function Cause() {
         </section>
         {/* ----- BUY TICKET ----- */}
         <section className="mt-5">
-          <Button variant="green" className="w-full" size="lg">
+          <Button variant="green" className="w-full" size="lg" onClick={() => handleBuyTicket(100)}>
             Buy Ticket ({fetchedData?.ticket_price} APT)
           </Button>
         </section>
