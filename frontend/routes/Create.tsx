@@ -12,10 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { CalendarIcon, LoaderIcon } from "lucide-react";
+import { CalendarIcon, CalendarPlusIcon, LoaderIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import type { CommittedTransactionResponse } from "@aptos-labs/ts-sdk";
+import { redirect } from "react-router-dom";
+import Heading from "@/components/Heading";
 
 export interface Cause {
   id: bigint;
@@ -137,6 +139,7 @@ export default function Create() {
       toast({
         description: "Your cause has been created successfully.",
       });
+      redirect(`/cause/${values.id}`);
     } catch (error) {
       console.error("Failed to create cause", error);
       toast({
@@ -148,161 +151,172 @@ export default function Create() {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        {/* ----- WALLET ADDRESS ----- */}
-        <FormField
-          control={form.control}
-          name="created_by"
-          render={({ field }) => <Input type="hidden" {...field} />}
+    <div className="lg:grid lg:grid-cols-5">
+      <div className="lg:col-span-3">
+        <Heading
+          title="Create Cause"
+          description="Create a new cause to raise funds for your charity or project. Fill out the form below to get started."
+          icon={<CalendarPlusIcon className="w-7 h-7 text-neutral-500" />}
         />
-        {/* ----- ID ----- */}
-        <FormField control={form.control} name="id" render={({ field }) => <Input type="hidden" {...field} />} />
-        {/* ----- TOTAL RAISED ----- */}
-        <FormField
-          control={form.control}
-          name="total_funds_raised"
-          render={({ field }) => <Input type="hidden" {...field} />}
-        />
-        {/* ----- TOTAL SOLD ----- */}
-        <FormField
-          control={form.control}
-          name="total_tickets_sold"
-          render={({ field }) => <Input type="hidden" {...field} />}
-        />
-        {/* ----- TITLE ----- */}
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input placeholder="Name" {...field} />
-              </FormControl>
-              <FormDescription>The title of your cause.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-          disabled={submitting}
-        />
-        {/* ----- DESCRIPTION ----- */}
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Description" {...field} />
-              </FormControl>
-              <FormDescription>A brief description of your cause.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-          disabled={submitting}
-        />
-        {/* ----- IMAGE ----- */}
-        <FormField
-          control={form.control}
-          name="image"
-          render={() => (
-            <FormItem>
-              <FormLabel>Image</FormLabel>
-              <FormControl>
-                <Input type="file" {...fileRef} disabled={submitting} />
-              </FormControl>
-              <FormDescription>An image to represent your cause.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-          disabled={submitting}
-        />
-        {/* ----- GOAL ----- */}
-        <FormField
-          control={form.control}
-          name="goal"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Goal Amount (APT)</FormLabel>
-              <FormControl>
-                <Input type="number" inputMode="decimal" placeholder="Goal" {...field} />
-              </FormControl>
-              <FormDescription>The amount you want to raise.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-          disabled={submitting}
-        />
-        {/* ----- DEADLINE ----- */}
-        <FormField
-          control={form.control}
-          name="deadline"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Deadline</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            {/* ----- WALLET ADDRESS ----- */}
+            <FormField
+              control={form.control}
+              name="created_by"
+              render={({ field }) => <Input type="hidden" {...field} />}
+            />
+            {/* ----- ID ----- */}
+            <FormField control={form.control} name="id" render={({ field }) => <Input type="hidden" {...field} />} />
+            {/* ----- TOTAL RAISED ----- */}
+            <FormField
+              control={form.control}
+              name="total_funds_raised"
+              render={({ field }) => <Input type="hidden" {...field} />}
+            />
+            {/* ----- TOTAL SOLD ----- */}
+            <FormField
+              control={form.control}
+              name="total_tickets_sold"
+              render={({ field }) => <Input type="hidden" {...field} />}
+            />
+            {/* ----- TITLE ----- */}
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Button variant="outline">
-                      <CalendarIcon className="w-4 h-4 mr-2" />
-                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                    </Button>
+                    <Input placeholder="Name" {...field} />
                   </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={new Date(field.value)}
-                    onSelect={field.onChange}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormDescription>The deadline for your cause.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-          disabled={submitting}
-        />
-        {/* ----- CHARITY PERCENTAGE ----- */}
-        <FormField
-          control={form.control}
-          name="charity_percentage"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Charity Percentage</FormLabel>
-              <FormControl>
-                <Input type="number" inputMode="decimal" placeholder="Goal" {...field} />
-              </FormControl>
-              <FormDescription>The percentage of funds that will go to the cause.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-          disabled={submitting}
-        />
-        {/* ----- TICKET PRICE ----- */}
-        <FormField
-          control={form.control}
-          name="ticket_price"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Ticket Price (APT)</FormLabel>
-              <FormControl>
-                <Input type="number" inputMode="decimal" placeholder="Ticket Price" {...field} />
-              </FormControl>
-              <FormDescription>The price of each ticket for the lottery.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-          disabled={submitting}
-        />
-        <Button type="submit" disabled={submitting}>
-          {submitting && <LoaderIcon className="animate-spin w-4 h-4 mr-2" />}
-          Save
-        </Button>
-      </form>
-    </Form>
+                  <FormDescription>The title of your cause.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+              disabled={submitting}
+            />
+            {/* ----- DESCRIPTION ----- */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Description" {...field} />
+                  </FormControl>
+                  <FormDescription>A brief description of your cause.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+              disabled={submitting}
+            />
+            {/* ----- IMAGE ----- */}
+            <FormField
+              control={form.control}
+              name="image"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Image</FormLabel>
+                  <FormControl>
+                    <Input type="file" {...fileRef} disabled={submitting} />
+                  </FormControl>
+                  <FormDescription>An image to represent your cause.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+              disabled={submitting}
+            />
+            {/* ----- GOAL ----- */}
+            <FormField
+              control={form.control}
+              name="goal"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Goal Amount (APT)</FormLabel>
+                  <FormControl>
+                    <Input type="number" inputMode="decimal" placeholder="Goal" {...field} />
+                  </FormControl>
+                  <FormDescription>The amount you want to raise.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+              disabled={submitting}
+            />
+            {/* ----- DEADLINE ----- */}
+            <FormField
+              control={form.control}
+              name="deadline"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Deadline</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button variant="outline">
+                          <CalendarIcon className="w-4 h-4 mr-2" />
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(field.value)}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>The deadline for your cause.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+              disabled={submitting}
+            />
+            {/* ----- CHARITY PERCENTAGE ----- */}
+            <FormField
+              control={form.control}
+              name="charity_percentage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Charity Percentage</FormLabel>
+                  <FormControl>
+                    <Input type="number" inputMode="decimal" placeholder="Goal" {...field} />
+                  </FormControl>
+                  <FormDescription>The percentage of funds that will go to the cause.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+              disabled={submitting}
+            />
+            {/* ----- TICKET PRICE ----- */}
+            <FormField
+              control={form.control}
+              name="ticket_price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ticket Price (APT)</FormLabel>
+                  <FormControl>
+                    <Input type="number" inputMode="decimal" placeholder="Ticket Price" {...field} />
+                  </FormControl>
+                  <FormDescription>The price of each ticket for the lottery.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+              disabled={submitting}
+            />
+            <div className="mt-3">
+              <Button type="submit" disabled={submitting}>
+                {submitting && <LoaderIcon className="animate-spin w-4 h-4 mr-2" />}
+                Create Cause
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </div>
+    </div>
   );
 }
