@@ -15,7 +15,7 @@ export default function CauseItem(props: CauseProps) {
     <Link className="border rounded overflow-hidden" to={`/cause/${props.cause.id}`}>
       <img
         className="aspect-video object-cover"
-        src={`${import.meta.env.VITE_SUPABASE_IMAGE_ENDPOINT}${props.cause.image}`}
+        src={`${import.meta.env.VITE_SUPABASE_IMAGE_ENDPOINT}/${props.cause.image}`}
         alt={props.cause.title}
       />
       <div className="flex flex-col gap-y-2 p-3">
