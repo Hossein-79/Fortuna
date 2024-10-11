@@ -46,8 +46,8 @@ const fetchCause = async (id: string): Promise<CauseResponse> => {
     throw new Error("Failed to fetch cause");
   }
 
-  const { data } = await cause.json();
-  return data;
+  const { data, tickets } = await cause.json();
+  return { ...data, total_tickets_sold: tickets, total_funds_raised: tickets * data.ticket_price };
 };
 
 const fetchUser = async (wallet: string): Promise<UserResponse> => {
@@ -130,6 +130,21 @@ export default function Cause() {
         }),
       );
       console.log(transaction);
+
+      const data = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/buy-ticket`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_KEY}`,
+        },
+        body: JSON.stringify({
+          cause_id: Number(id),
+          user: account.address,
+          amount: ticketAmount,
+        }),
+      });
+      console.log("data", data);
+
       toast({ description: "Ticket bought successfully" });
       setTicketAmount(1);
     } catch (error) {
@@ -175,7 +190,9 @@ export default function Cause() {
           <div className="grid grid-cols-2 border-b">
             <div className="flex flex-col items-center justify-center border-r p-2">
               <strong>{fetchedData?.total_tickets_sold}</strong>
-              <small className="text-xs text-neutral-400">Tickets Sold</small>
+              <small className="text-xs text-neutral-400">
+                Ticket{fetchedData?.total_tickets_sold === 1 ? "" : "s"} Sold
+              </small>
             </div>
             <div className="flex flex-col items-center justify-center p-2">
               <strong>{convertTimestampToReadable(fetchedData?.deadline!)}</strong>

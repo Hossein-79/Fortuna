@@ -13,11 +13,11 @@ Deno.serve(async (req) => {
       global: { headers: { ...corsHeaders, Authorization: req.headers.get("Authorization")! } },
     });
 
-    const { id, total_tickets } = await req.json();
+    const { cause_id, amount, user } = await req.json();
     // update row
     const { data, error } = await supabase
-      .from("causes")
-      .update({ total_tickets })
+      .from("tickets")
+      .insert([{ cause_id, amount, user }]);
 
     if (error) {
       throw new Error(error.message);

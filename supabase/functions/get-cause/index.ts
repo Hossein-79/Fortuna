@@ -25,7 +25,12 @@ Deno.serve(async (req) => {
       .eq("id", id)
       .single();
 
-    if (error) {
+    const { data: ticketsData, error: ticketsError } = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("cause_id", id);
+
+    if (error || ticketsError) {
       return new Response(
         JSON.stringify({
           data: null,
@@ -37,6 +42,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         data,
+        tickets: ticketsData.length || 0,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
