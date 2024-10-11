@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { buyTicket } from "@/entry-functions/buyTicket";
 import { calculatePercentage, convertTimestampToReadable } from "@/utils/helpers";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { CopyIcon, InfoIcon } from "lucide-react";
+import { CopyIcon, InfoIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -75,6 +75,7 @@ export default function Cause() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [fetchedData, setFetchedData] = useState<CauseResponse | null>(null);
   const [fetchedUserData, setFetchedUserData] = useState<UserResponse | null>(null);
+  const [ticketAmount, setTicketAmount] = useState(1);
 
   useEffect(() => {
     const fetchCauseData = async () => {
@@ -103,6 +104,16 @@ export default function Cause() {
     toast({ description: `Wallet address copied to clipboard` });
   }
 
+  function incrementTicketAmount() {
+    setTicketAmount((prev) => prev + 1);
+  }
+
+  function decrementTicketAmount() {
+    if (ticketAmount > 1) {
+      setTicketAmount((prev) => prev - 1);
+    }
+  }
+
   async function handleBuyTicket(amount: number) {
     if (!account) {
       toast({ description: "Please connect your wallet" });
@@ -120,6 +131,7 @@ export default function Cause() {
       );
       console.log(transaction);
       toast({ description: "Ticket bought successfully" });
+      setTicketAmount(1);
     } catch (error) {
       toast({ description: "Failed to buy ticket" });
     }
@@ -132,7 +144,7 @@ export default function Cause() {
       <div className="md:col-span-4 flex flex-col gap-4">
         <img
           className="aspect-video object-cover rounded-lg"
-          src={`${import.meta.env.VITE_SUPABASE_IMAGE_ENDPOINT}${fetchedData?.image}`}
+          src={`${import.meta.env.VITE_SUPABASE_IMAGE_ENDPOINT}/${fetchedData?.image}`}
           alt={fetchedData?.title}
         />
         <div>
@@ -203,8 +215,19 @@ export default function Cause() {
         </section>
         {/* ----- BUY TICKET ----- */}
         <section className="mt-5">
-          <Button variant="green" className="w-full" size="lg" onClick={() => handleBuyTicket(100)}>
-            Buy Ticket ({fetchedData?.ticket_price} APT)
+          <div className="flex gap-3 mb-3">
+            <Button variant="icon" size="icon" onClick={decrementTicketAmount}>
+              <MinusIcon className="h-4 w-4" />
+            </Button>
+            <span className="flex justify-center items-center bg-slate-50 grow text-center rounded-full border">
+              {ticketAmount}
+            </span>
+            <Button variant="icon" size="icon" onClick={incrementTicketAmount}>
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button variant="green" className="w-full" size="lg" onClick={() => handleBuyTicket(ticketAmount)}>
+            Buy {ticketAmount} Ticket{ticketAmount > 0 && "s"} ({fetchedData?.ticket_price! * ticketAmount} APT)
           </Button>
         </section>
       </div>
