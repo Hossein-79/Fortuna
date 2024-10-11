@@ -48,7 +48,7 @@ export default function Explore() {
       ) : (
         <>
           {fetchedData && fetchedData?.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-5">
               {fetchedData?.map((cause) => <CauseItem key={cause.id} cause={cause} />)}
             </div>
           ) : (
