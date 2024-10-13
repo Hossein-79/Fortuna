@@ -7,6 +7,7 @@ import Create from "@/routes/Create";
 import Cause from "@/routes/Cause";
 import Explore from "@/routes/Explore";
 import MyCauses from "@/routes/MyCauses";
+import MyTickets from "@/routes/MyTickets";
 
 const router = createBrowserRouter([
   {
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
       {
         path: '/mycauses',
         Component: MyCauses
+      },
+      {
+        path: '/mytickets',
+        Component: MyTickets
       },
       {
         path: '/create',
