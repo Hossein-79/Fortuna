@@ -76,6 +76,7 @@ export default function Cause() {
   const [fetchedData, setFetchedData] = useState<CauseResponse | null>(null);
   const [fetchedUserData, setFetchedUserData] = useState<UserResponse | null>(null);
   const [ticketAmount, setTicketAmount] = useState(1);
+  const [isOver, setIsOver] = useState(false);
 
   useEffect(() => {
     const fetchCauseData = async () => {
@@ -91,6 +92,12 @@ export default function Cause() {
   useEffect(() => {
     const fetchUserData = async () => {
       setFetchedUserData(await fetchUser(fetchedData?.created_by!));
+      // Check if deadline is over
+      const deadline = new Date(fetchedData?.deadline!).getTime();
+      const now = new Date().getTime();
+      if (deadline < now) {
+        setIsOver(true);
+      }
       setLoadingUser(false);
     };
 
@@ -232,20 +239,28 @@ export default function Cause() {
         </section>
         {/* ----- BUY TICKET ----- */}
         <section className="mt-5">
-          <div className="flex gap-3 mb-3">
-            <Button variant="icon" size="icon" onClick={decrementTicketAmount}>
-              <MinusIcon className="h-4 w-4" />
-            </Button>
-            <span className="flex justify-center items-center bg-slate-50 grow text-center rounded-full border">
-              {ticketAmount}
-            </span>
-            <Button variant="icon" size="icon" onClick={incrementTicketAmount}>
-              <PlusIcon className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button variant="green" className="w-full" size="lg" onClick={() => handleBuyTicket(ticketAmount)}>
-            Buy {ticketAmount} Ticket{ticketAmount > 0 && "s"} ({fetchedData?.ticket_price! * ticketAmount} APT)
-          </Button>
+          {isOver ? (
+            <>
+              <div className="text-center text-neutral-400 p-2">Deadline is over</div>
+            </>
+          ) : (
+            <>
+              <div className="flex gap-3 mb-3">
+                <Button variant="icon" size="icon" onClick={decrementTicketAmount}>
+                  <MinusIcon className="h-4 w-4" />
+                </Button>
+                <span className="flex justify-center items-center bg-slate-50 grow text-center rounded-full border">
+                  {ticketAmount}
+                </span>
+                <Button variant="icon" size="icon" onClick={incrementTicketAmount}>
+                  <PlusIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button variant="green" className="w-full" size="lg" onClick={() => handleBuyTicket(ticketAmount)}>
+                Buy {ticketAmount} Ticket{ticketAmount > 0 && "s"} ({fetchedData?.ticket_price! * ticketAmount} APT)
+              </Button>
+            </>
+          )}
         </section>
       </div>
     </div>
