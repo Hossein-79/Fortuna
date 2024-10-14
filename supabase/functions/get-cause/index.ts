@@ -42,7 +42,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         data,
-        tickets: ticketsData.length || 0,
+        tickets: {
+          amount: ticketsData.reduce((acc, ticket) => acc + ticket.amount, 0),
+          raised: ticketsData.reduce((acc, ticket) => acc + ticket.amount, 0) * data.ticket_price,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

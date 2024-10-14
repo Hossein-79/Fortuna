@@ -47,7 +47,7 @@ const fetchCause = async (id: string): Promise<CauseResponse> => {
   }
 
   const { data, tickets } = await cause.json();
-  return { ...data, total_tickets_sold: tickets, total_funds_raised: tickets * data.ticket_price };
+  return { ...data, total_tickets_sold: tickets.amount, total_funds_raised: tickets.raised };
 };
 
 const fetchUser = async (wallet: string): Promise<UserResponse> => {

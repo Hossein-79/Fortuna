@@ -4,6 +4,10 @@ import { Link } from "react-router-dom";
 import { Progress } from "./ui/progress";
 import { useEffect, useState } from "react";
 import { LoaderIcon } from "lucide-react";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { Button } from "./ui/button";
+import { useToast } from "./ui/use-toast";
+import { closeCause } from "@/entry-functions/closeCause";
 
 function checkIfFinishedTime(deadline: number) {
   return new Date(deadline).valueOf() > new Date().valueOf();
@@ -21,9 +25,12 @@ interface CauseProps {
   cause: CauseResponse;
 }
 export default function CauseItem(props: CauseProps) {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [totalRaised, setTotalRaised] = useState(0);
   const [fetchedData, setFetchedData] = useState<TicketResponse[] | null>(null);
+  const { account, signAndSubmitTransaction, connected } = useWallet();
+  const [distributing, setDistributing] = useState(false);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -59,6 +66,32 @@ export default function CauseItem(props: CauseProps) {
       setLoading(false);
     }
   }, [fetchedData]);
+
+  async function handleDistributeCause(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (!account) {
+      toast({ description: "Please connect your wallet" });
+      return;
+    }
+
+    setDistributing(true);
+    try {
+      const transaction = await signAndSubmitTransaction(
+        closeCause({
+          user: account.address!,
+          cause_id: Number(props.cause.id),
+          cause_addr: props.cause.created_by!,
+        }),
+      );
+      console.log(transaction);
+      toast({ description: "Cause closed and funds were distributed successfully." });
+    } catch (error) {
+      console.error(error);
+      toast({ description: "Failed to distribute funds" });
+    } finally {
+      setDistributing(false);
+    }
+  }
 
   return (
     <Link className="border rounded overflow-hidden" to={`/cause/${props.cause.id}`}>
@@ -100,7 +133,16 @@ export default function CauseItem(props: CauseProps) {
             </div>
           </div>
         ) : (
-          <div className="mt-4 text-center text-neutral-400 font-bold text-xs">Finished</div>
+          <>
+            {connected && account?.address === props.cause.created_by && props.cause.total_funds_raised > 0 ? (
+              <Button className="w-full mt-4" variant="green" onClick={handleDistributeCause} disabled={distributing}>
+                {distributing && <LoaderIcon className="w-4 h-4 mr-2 animate-spin" />}
+                Distribute Funds
+              </Button>
+            ) : (
+              <div className="mt-4 text-center text-neutral-400 font-bold text-xs">Finished</div>
+            )}
+          </>
         )}
       </div>
     </Link>
