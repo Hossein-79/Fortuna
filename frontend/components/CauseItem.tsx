@@ -94,7 +94,7 @@ export default function CauseItem(props: CauseProps) {
   }
 
   return (
-    <Link className="border rounded overflow-hidden" to={`/cause/${props.cause.id}`}>
+    <Link className="flex flex-col border rounded overflow-hidden" to={`/cause/${props.cause.id}`}>
       <img
         className="aspect-video object-cover"
         src={`${import.meta.env.VITE_SUPABASE_IMAGE_ENDPOINT}/${props.cause.image}`}
@@ -107,7 +107,7 @@ export default function CauseItem(props: CauseProps) {
           {props.cause.description.length > 100 && "..."}
         </small>
       </div>
-      <div className="bg-slate-50/50 p-3">
+      <div className="bg-slate-50/50 p-3 mt-auto">
         <div>
           <div className="flex justify-between items-end px-1">
             <strong>{loading ? <LoaderIcon className="w-4 h-4 animate-spin" /> : totalRaised} APT</strong>
@@ -134,7 +134,7 @@ export default function CauseItem(props: CauseProps) {
           </div>
         ) : (
           <>
-            {connected && account?.address === props.cause.created_by && props.cause.total_funds_raised > 0 ? (
+            {connected && account?.address === props.cause.created_by ? (
               <Button className="w-full mt-4" variant="green" onClick={handleDistributeCause} disabled={distributing}>
                 {distributing && <LoaderIcon className="w-4 h-4 mr-2 animate-spin" />}
                 Distribute Funds
