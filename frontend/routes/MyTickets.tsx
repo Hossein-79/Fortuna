@@ -69,7 +69,7 @@ export default function MyTickets() {
           ) : (
             <div className="flex flex-col justify-center items-center text-neutral-400 m-auto grow h-full">
               <HeartCrackIcon size={64} />
-              <span className="mt-3">You have not created any causes</span>
+              <span className="mt-3">You have not purchased any tickets</span>
             </div>
           )}
         </>
