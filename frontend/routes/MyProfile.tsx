@@ -67,10 +67,12 @@ export default function MyProfile() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [fetchedData, setFetchedData] = useState<UserProfile | null>(null);
+  const [hasFetchedData, setHasFetchedData] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
       setFetchedData(await fetchProfile(account?.address!));
+      setHasFetchedData(true);
     };
 
     if (account && !fetchedData) {
@@ -79,11 +81,11 @@ export default function MyProfile() {
   }, [account]);
 
   useEffect(() => {
-    if (fetchedData) {
-      form.reset({ ...fetchedData, profile_picture: undefined });
+    if (hasFetchedData) {
       setLoading(false);
+      form.reset({ ...fetchedData, profile_picture: undefined, wallet_address: account?.address });
     }
-  }, [fetchedData]);
+  }, [hasFetchedData]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -93,9 +95,10 @@ export default function MyProfile() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (submitting) return;
     setSubmitting(true);
+    console.log("values", values);
     try {
       let profileData = { ...values, profile_picture: undefined as string | undefined };
-
+      console.log("profileData", profileData);
       if (values.profile_picture) {
         const uploadedProfilePicture = await uploadProfilePicture(values.profile_picture?.[0]);
         const profilePictureUrl = uploadedProfilePicture.path;
@@ -110,6 +113,7 @@ export default function MyProfile() {
         },
         body: JSON.stringify(profileData),
       });
+      console.log("data", data);
 
       if (!data.ok) {
         throw new Error("Failed to update user");
@@ -195,7 +199,7 @@ export default function MyProfile() {
           <FormField
             control={form.control}
             name="profile_picture"
-            render={({ field }) => (
+            render={() => (
               <FormItem>
                 <FormLabel>Profile Picture</FormLabel>
                 <FormControl>

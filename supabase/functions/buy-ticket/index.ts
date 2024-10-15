@@ -13,11 +13,11 @@ Deno.serve(async (req) => {
       global: { headers: { ...corsHeaders, Authorization: req.headers.get("Authorization")! } },
     });
 
-    const { id, title, description, goal, deadline, charity_percentage, image, ticket_price, total_tickets, total_funds_raised, created_by } = await req.json();
-
+    const { cause_id, amount, user } = await req.json();
+    // update row
     const { data, error } = await supabase
-      .from("causes")
-      .insert({ id, title, description, goal, deadline, charity_percentage, image, ticket_price, created_by, total_funds_raised: 0, total_tickets_sold: 0 }, { onConflict: ["id"] });
+      .from("tickets")
+      .insert([{ cause_id, amount, user }]);
 
     if (error) {
       throw new Error(error.message);
@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        message: "Cause created successfully",
+        message: "Ticket bought successfully",
         data,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

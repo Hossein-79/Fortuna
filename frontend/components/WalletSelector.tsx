@@ -11,7 +11,19 @@ import {
   truncateAddress,
   useWallet,
 } from "@aptos-labs/wallet-adapter-react";
-import { ArrowLeft, ArrowRight, ChevronDown, Copy, LogOut, User } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarPlusIcon,
+  ChevronDown,
+  ChevronDownIcon,
+  CompassIcon,
+  EditIcon,
+  ListTodoIcon,
+  LogOutIcon,
+  TicketIcon,
+  User,
+} from "lucide-react";
 import { useCallback, useState } from "react";
 // Internal components
 import { Button } from "@/components/ui/button";
@@ -21,52 +33,67 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/components/ui/use-toast";
+import { Link } from "react-router-dom";
 
 export function WalletSelector() {
   const { account, connected, disconnect, wallet } = useWallet();
-  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const closeDialog = useCallback(() => setIsDialogOpen(false), []);
 
-  const copyAddress = useCallback(async () => {
-    if (!account?.address) return;
-    try {
-      await navigator.clipboard.writeText(account.address);
-      toast({
-        title: "Success",
-        description: "Copied wallet address to clipboard.",
-      });
-    } catch {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to copy wallet address.",
-      });
-    }
-  }, [account?.address, toast]);
-
   return connected ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button>{account?.ansName || truncateAddress(account?.address) || "Unknown"}</Button>
+        <Button variant="secondary">
+          {account?.ansName || truncateAddress(account?.address) || "Unknown"}
+          <ChevronDownIcon className="h-4 w-4 ml-2" />
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={copyAddress} className="gap-2">
-          <Copy className="h-4 w-4" /> Copy address
+        <DropdownMenuItem asChild>
+          <Link to="/create" className="flex cursor-pointer gap-2">
+            <CalendarPlusIcon className="h-4 w-4" /> Create a Cause
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/explore" className="flex cursor-pointer gap-2">
+            <CompassIcon className="h-4 w-4" /> Explore Causes
+          </Link>
         </DropdownMenuItem>
         {wallet && isAptosConnectWallet(wallet) && (
           <DropdownMenuItem asChild>
-            <a href={APTOS_CONNECT_ACCOUNT_URL} target="_blank" rel="noopener noreferrer" className="flex gap-2">
+            <Link
+              to={APTOS_CONNECT_ACCOUNT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex cursor-pointer gap-2"
+            >
               <User className="h-4 w-4" /> Account
-            </a>
+            </Link>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onSelect={disconnect} className="gap-2">
-          <LogOut className="h-4 w-4" /> Disconnect
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/mytickets" className="flex cursor-pointer gap-2">
+            <TicketIcon className="h-4 w-4" /> My Tickets
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/mycauses" className="flex cursor-pointer gap-2">
+            <ListTodoIcon className="h-4 w-4" /> My Causes
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/myprofile" className="flex cursor-pointer gap-2">
+            <EditIcon className="h-4 w-4" /> My Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={disconnect} className="gap-2 cursor-pointer">
+          <LogOutIcon className="h-4 w-4" /> Disconnect
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

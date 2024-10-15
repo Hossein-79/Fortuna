@@ -3,8 +3,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
+import { buyTicket } from "@/entry-functions/buyTicket";
 import { calculatePercentage, convertTimestampToReadable } from "@/utils/helpers";
-import { CopyIcon, InfoIcon } from "lucide-react";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { CopyIcon, InfoIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -44,8 +46,8 @@ const fetchCause = async (id: string): Promise<CauseResponse> => {
     throw new Error("Failed to fetch cause");
   }
 
-  const { data } = await cause.json();
-  return data;
+  const { data, tickets } = await cause.json();
+  return { ...data, total_tickets_sold: tickets.amount, total_funds_raised: tickets.raised };
 };
 
 const fetchUser = async (wallet: string): Promise<UserResponse> => {
@@ -66,12 +68,15 @@ const fetchUser = async (wallet: string): Promise<UserResponse> => {
 
 export default function Cause() {
   const { toast } = useToast();
+  const { account, signAndSubmitTransaction } = useWallet();
   const { id } = useParams<{ id: string; creator: string }>();
 
   const [loading, setLoading] = useState(true);
   const [loadingUser, setLoadingUser] = useState(true);
   const [fetchedData, setFetchedData] = useState<CauseResponse | null>(null);
   const [fetchedUserData, setFetchedUserData] = useState<UserResponse | null>(null);
+  const [ticketAmount, setTicketAmount] = useState(1);
+  const [isOver, setIsOver] = useState(false);
 
   useEffect(() => {
     const fetchCauseData = async () => {
@@ -87,6 +92,12 @@ export default function Cause() {
   useEffect(() => {
     const fetchUserData = async () => {
       setFetchedUserData(await fetchUser(fetchedData?.created_by!));
+      // Check if deadline is over
+      const deadline = new Date(fetchedData?.deadline!).getTime();
+      const now = new Date().getTime();
+      if (deadline < now) {
+        setIsOver(true);
+      }
       setLoadingUser(false);
     };
 
@@ -100,6 +111,54 @@ export default function Cause() {
     toast({ description: `Wallet address copied to clipboard` });
   }
 
+  function incrementTicketAmount() {
+    setTicketAmount((prev) => prev + 1);
+  }
+
+  function decrementTicketAmount() {
+    if (ticketAmount > 1) {
+      setTicketAmount((prev) => prev - 1);
+    }
+  }
+
+  async function handleBuyTicket(amount: number) {
+    if (!account) {
+      toast({ description: "Please connect your wallet" });
+      return;
+    }
+
+    try {
+      const transaction = await signAndSubmitTransaction(
+        buyTicket({
+          user: account.address!,
+          amount,
+          cause_id: Number(id),
+          to_address: fetchedData?.created_by!,
+        }),
+      );
+      console.log(transaction);
+
+      const data = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/buy-ticket`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_KEY}`,
+        },
+        body: JSON.stringify({
+          cause_id: Number(id),
+          user: account.address,
+          amount: ticketAmount,
+        }),
+      });
+      console.log("data", data);
+
+      toast({ description: "Ticket bought successfully" });
+      setTicketAmount(1);
+    } catch (error) {
+      toast({ description: "Failed to buy ticket" });
+    }
+  }
+
   return loading ? (
     <Loading />
   ) : (
@@ -107,7 +166,7 @@ export default function Cause() {
       <div className="md:col-span-4 flex flex-col gap-4">
         <img
           className="aspect-video object-cover rounded-lg"
-          src={`${import.meta.env.VITE_SUPABASE_IMAGE_ENDPOINT}${fetchedData?.image}`}
+          src={`${import.meta.env.VITE_SUPABASE_IMAGE_ENDPOINT}/${fetchedData?.image}`}
           alt={fetchedData?.title}
         />
         <div>
@@ -138,7 +197,9 @@ export default function Cause() {
           <div className="grid grid-cols-2 border-b">
             <div className="flex flex-col items-center justify-center border-r p-2">
               <strong>{fetchedData?.total_tickets_sold}</strong>
-              <small className="text-xs text-neutral-400">Tickets Sold</small>
+              <small className="text-xs text-neutral-400">
+                Ticket{fetchedData?.total_tickets_sold === 1 ? "" : "s"} Sold
+              </small>
             </div>
             <div className="flex flex-col items-center justify-center p-2">
               <strong>{convertTimestampToReadable(fetchedData?.deadline!)}</strong>
@@ -178,9 +239,28 @@ export default function Cause() {
         </section>
         {/* ----- BUY TICKET ----- */}
         <section className="mt-5">
-          <Button variant="green" className="w-full" size="lg">
-            Buy Ticket ({fetchedData?.ticket_price} APT)
-          </Button>
+          {isOver ? (
+            <>
+              <div className="text-center text-neutral-400 p-2">Deadline is over</div>
+            </>
+          ) : (
+            <>
+              <div className="flex gap-3 mb-3">
+                <Button variant="icon" size="icon" onClick={decrementTicketAmount}>
+                  <MinusIcon className="h-4 w-4" />
+                </Button>
+                <span className="flex justify-center items-center bg-slate-50 grow text-center rounded-full border">
+                  {ticketAmount}
+                </span>
+                <Button variant="icon" size="icon" onClick={incrementTicketAmount}>
+                  <PlusIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button variant="green" className="w-full" size="lg" onClick={() => handleBuyTicket(ticketAmount)}>
+                Buy {ticketAmount} Ticket{ticketAmount > 0 && "s"} ({fetchedData?.ticket_price! * ticketAmount} APT)
+              </Button>
+            </>
+          )}
         </section>
       </div>
     </div>

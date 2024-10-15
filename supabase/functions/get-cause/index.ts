@@ -25,18 +25,32 @@ Deno.serve(async (req) => {
       .eq("id", id)
       .single();
 
-    if (error) {
-      throw new Error(error.message);
+    const { data: ticketsData, error: ticketsError } = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("cause_id", id);
+
+    if (error || ticketsError) {
+      return new Response(
+        JSON.stringify({
+          data: null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(
       JSON.stringify({
         data,
+        tickets: {
+          amount: ticketsData.reduce((acc, ticket) => acc + ticket.amount, 0),
+          raised: ticketsData.reduce((acc, ticket) => acc + ticket.amount, 0) * data.ticket_price,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 });
   }
 })
 
