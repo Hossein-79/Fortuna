@@ -52,6 +52,14 @@ module fortuna_addr::fortuna {
         };
 
         let storage_ref = borrow_global_mut<UserStorage>(user_addr);
+        let length = vector::length(&storage_ref.causes);
+        let i = 0;
+
+        while (i < length) {
+            let cause = vector::borrow_mut(&mut storage_ref.causes, i);
+            assert!( cause.id != new_cause_id, E_CAUSE_DUPLICATED_ID);
+            i = i + 1;
+        };
 
         let new_cause = Cause {
             id: new_cause_id,
@@ -63,16 +71,6 @@ module fortuna_addr::fortuna {
             winner: @0x0, 
             open: true,
         };
-
-        let length = vector::length(&storage_ref.causes);
-        let i = 0;
-
-        // while (i < length) {
-        //     let cause = vector::borrow_mut(&mut storage_ref.causes, i);
-        //     assert!( cause.id == new_cause_id, E_CAUSE_DUPLICATED_ID);
-        //     i = i + 1;
-        // };
-
         vector::push_back(&mut storage_ref.causes, new_cause);
 
         event::emit(CauseCreatedEvent {
@@ -105,7 +103,7 @@ module fortuna_addr::fortuna {
                     vector::push_back(&mut cause.tickets, addr);
                     j = j + 1;
                 };
-                assert!( cause.open != true, E_CAUSE_CLOSED);
+                assert!( cause.open == true, E_CAUSE_CLOSED);
 
                 // aptos_account::transfer(from,to_address,amount);
                 aptos_account::transfer(from, CONTRACT_ADDRESS, amount);
@@ -128,10 +126,10 @@ module fortuna_addr::fortuna {
         while (i < length) {
             let cause = vector::borrow_mut(&mut to_store.causes, i);
             if (cause.id == cause_id) {
-                assert!( cause.open != true, E_CAUSE_CLOSED);
+                assert!( cause.open == true, E_CAUSE_CLOSED);
 
                 let n = vector::length(&cause.tickets);
-                assert!(n > 0, E_NO_TICKETS);
+                assert!(n == 0, E_NO_TICKETS);
 
                 let winner_idx = aptos_framework::randomness::u64_range(1, n);
                 let winning_address = *vector::borrow(&cause.tickets, winner_idx);
@@ -151,24 +149,24 @@ module fortuna_addr::fortuna {
         };
     }
 
-
-
     #[view]
     public fun get_causes(user_addr: address): vector<Cause> acquires UserStorage {
         let user_storage = borrow_global<UserStorage>(user_addr);
         return user_storage.causes
     }
-
     // ---------------------- test --------------------
 
-    #[test(test_user = @0x4321)]
-    fun test_create_and_get_causes(test_user: signer) acquires UserStorage {
+    #[test(test_user = @0x432, aptos_framework = @0x1)]
+    fun test_create_and_get_causes(test_user: signer, aptos_framework: &signer) acquires UserStorage {
         use std::string;
         use std::vector;
-        // Get the admin address
+        use std::coin;
+        use std::aptos_coin::AptosCoin; 
+        use std::account;
+        
         let owner = signer::address_of(&test_user);
+        let (burn_cap, mint_cap) = aptos_framework::aptos_coin::initialize_for_test(aptos_framework);
 
-        // Create some lotteries
         let cause_name1 = string::utf8(b"First Cause");
         let cause_name2 = string::utf8(b"Second Cause");
         create_cause(&test_user, cause_name1, 1000, 10, 5, 1);
@@ -184,5 +182,37 @@ module fortuna_addr::fortuna {
 
         let second_lottery = vector::borrow(&lotteries, 1);
         assert!(second_lottery.title == cause_name2, 3);  // Verify the second lottery name
+
+        let aptos_framework_address = signer::address_of(aptos_framework);
+
+        account::create_account_for_test(aptos_framework_address);
+        let test1 = account::create_account_for_test(@0x3);
+        let test2 = account::create_account_for_test(@0x4);
+
+        coin::register<AptosCoin>(&test1);
+        coin::register<AptosCoin>(&test2);
+
+        aptos_coin::mint(aptos_framework, @0x3, 150);
+        aptos_coin::mint(aptos_framework, @0x4, 50);
+
+        let buyer_initial_balance = coin::balance<AptosCoin>(signer::address_of(&test1));
+        let ticket_purchase_amount: u64 = 50;
+        let ticket_purchase_amount2: u64 = 10;
+
+        buy_ticket(&test1, owner, 1, ticket_purchase_amount);
+        buy_ticket(&test2, owner, 1, ticket_purchase_amount2);
+
+        let buyer_balance_after_purchase = coin::balance<AptosCoin>(signer::address_of(&test1));
+        let expected_balance_after_purchase = buyer_initial_balance - ticket_purchase_amount;
+        assert!(buyer_balance_after_purchase == expected_balance_after_purchase, 5);
+
+        let updated_causes = get_causes(owner);
+        let updated_first_cause = vector::borrow(&updated_causes, 0);
+
+        // Check if tickets were bought successfully
+        assert!(vector::length(&updated_first_cause.tickets) == 12, 6);
+        
+        coin::destroy_burn_cap(burn_cap);
+        coin::destroy_mint_cap(mint_cap);
     }
 }
